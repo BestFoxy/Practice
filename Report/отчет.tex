@@ -1,0 +1,293 @@
+%% -*- coding: utf-8 -*-
+\documentclass[12pt,a4paper]{scrartcl} 
+\usepackage[utf8]{inputenc}
+\usepackage[english,russian]{babel}
+\usepackage{indentfirst}
+\usepackage{misccorr}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\begin{document}
+	\begin{titlepage}
+		\begin{center}
+			\large
+			МИНИСТЕРСТВО НАУКИ И ВЫСШЕГО ОБРАЗОВАНИЯ РОССИЙСКОЙ ФЕДЕРАЦИИ
+			
+			Федеральное государственное бюджетное образовательное учреждение высшего образования
+			
+			\textbf{АДЫГЕЙСКИЙ ГОСУДАРСТВЕННЫЙ УНИВЕРСИТЕТ}
+			\vspace{0.25cm}
+			
+			Инженерно-физический факультет
+			
+			Кафедра управления и информатики в технических системах
+			\vfill
+			
+			\vfill
+			
+			\textsc{Отчет по практике}\\[5mm]
+			
+			{\LARGE Программаная реализация численного метода \textit{Решение системы линейных алгебраических уравнений методом Гаусса-Жордана.}}
+			\bigskip
+			
+			1 курс, группа 1УТС
+		\end{center}
+		\vfill
+		
+		\newlength{\ML}
+		\settowidth{\ML}{«\underline{\hspace{0.7cm}}» \underline{\hspace{2cm}}}
+		\hfill\begin{minipage}{0.5\textwidth}
+			Выполнил:\\
+			\underline{\hspace{\ML}} А.\,А.~Ашла\\
+			«\underline{\hspace{0.7cm}}» \underline{\hspace{2cm}} 2022 г.
+		\end{minipage}%
+		\bigskip
+		
+		\hfill\begin{minipage}{0.5\textwidth}
+			Руководитель:\\
+			\underline{\hspace{\ML}} С.\,В.~Теплоухов\\
+			«\underline{\hspace{0.7cm}}» \underline{\hspace{2cm}} 2022 г.
+		\end{minipage}%
+		\vfill
+		
+		\begin{center}
+			Майкоп, 2022 г.
+		\end{center}
+	\end{titlepage}
+
+	\section{Введение}
+	\label{sec:intro}
+	
+	% Что должно быть во введении
+	\begin{enumerate}
+		\item Текстовая формулировка задачи
+		\item Пример кода, решающего данную задачу
+		\item График
+		\item Скриншот программы
+	\end{enumerate}
+	
+	Пример приведен в пункте ~\ref{sec:exp} на стр.~\pageref{sec:exp}.
+	
+	\section{Ход работы}
+	\label{sec:exp}
+	
+	\subsection{Код приложения}
+	\label{sec:exp:code}
+	\begin{verbatim}
+		public static void main(String[] args) {
+			int[] answers = {128, 208, 240, 154};
+			int[][] matrix = {
+				{12, 6, 2, 16},
+				{20, 56, 18, 17},
+				{18, 0, 34, 15},
+				{2, 5, 17, 17}
+			};
+			SystemLinearAlgebraicEquations slau = new
+			SystemLinearAlgebraicEquations(matrix, answers);
+			slau.calculation();
+			double[] result = slau.getResult();
+			System.out.println("Ответ:");
+			for(int i = 0; i < result.length; i++)
+			System.out.printf("   x%d = %7.1f;\n", i + 1, result[i]);
+		}
+	
+	    public class SystemLinearAlgebraicEquations {
+	    	
+	    	private static final String FORMAT = String.format("%s%d%s", "%", 8, ".1f");
+	    	
+	    	private final double[][] matrix;
+	    	private final double[] answers;
+	    	private final boolean[] lines;
+	    	
+	    	public SystemLinearAlgebraicEquations(int[][] matrix, int[] answers) {
+	    		this.checkArguments(matrix, answers);
+	    		this.matrix = parseMatrixIntToDouble(matrix);
+	    		this.answers = parseIntToDouble(answers);
+	    		this.lines = new boolean[answers.length];
+	    	}
+	    	
+	    	private void checkArguments(int[][] matrix, int[] answers) {
+	    		if(matrix == null || matrix.length == 0)
+	    		throw new IllegalArgumentException("Matrix not may be null or empty.");
+	    		if(answers == null || answers.length == 0)
+	    		throw new IllegalArgumentException("Answers not may be null or empty.");
+	    		if(matrix.length != answers.length)
+	    		throw new IllegalArgumentException("Amount answer not equal height matrix.");
+	    		if(!checkSquareMatrix(matrix))
+	    		throw new IllegalArgumentException("Matrix not may be not square.");
+	    	}
+	    	
+	    	private boolean checkSquareMatrix(int[][] matrix) {
+	    		int size = matrix.length;
+	    		for(int[] line : matrix) {
+	    			if(line.length != size)
+	    			return false;
+	    		}
+	    		return true;
+	    	}
+	    	
+	    	private double[][] parseMatrixIntToDouble(int[][] matrix) {
+	    		double[][] result = new double[matrix.length][];
+	    		int count = 0;
+	    		for(int[] line : matrix)
+	    		result[count++] = parseIntToDouble(line);
+	    		return result;
+	    	}
+	    	
+	    	private double[] parseIntToDouble(int[] line) {
+	    		double[] result = new double[line.length];
+	    		for(int i = 0; i < line.length; i++)
+	    		result[i] = line[i];
+	    		return result;
+	    	}
+	    	
+	    	public void calculation() {
+	    		System.out.println("Дана СЛАУ:");
+	    		printSLAU(matrix, answers);
+	    		
+	    		double element;
+	    		int index;
+	    		int row = 0;
+	    		
+	    		while(!isEnd(lines)) {
+	    			System.out.println("####################### СТОЛБЕЦ №" + (row + 1)
+	    			+ " #######################\n");
+	    			
+	    			System.out.println("Ищем разрешающий элемент в столбце #" + (row + 1) + ":");
+	    			index = getIndexMin(matrix, lines, row);
+	    			element = matrix[index][row];
+	    			System.out.printf("элемент = %.1f;\n", element);
+	    			
+	    			System.out.println("\nДелим строку #" + (index + 1) + " на " + element + ":");
+	    			divToElement(matrix[index], element);
+	    			answers[index] /= element;
+	    			printSLAU(matrix, answers);
+	    			
+	    			System.out.println("Обнулим в столбце #" + (row + 1) + " все элементы,
+	    			кроме разрешающего:");
+	    			toNullifyElements(matrix, answers, index, row);
+	    			printSLAU(matrix, answers);
+	    			
+	    			lines[index] = true;
+	    			row++;
+	    		}
+	    		System.out.println("########################################
+	    		###################\n");
+	    	}
+	    	
+	    	public double[] getResult() {
+	    		if(matrix == null || matrix.length == 0 ||
+	    	    answers == null || answers.length == 0)
+	    		throw new IllegalArgumentException("Calculation failed.");
+	    		return getAnswer(matrix, answers);
+	    	}
+	    	
+	    	private double[] getAnswer(double[][] matrix, double[] answers) {
+	    		double[] result = new double[answers.length];
+	    		for(int i = 0; i < matrix.length; i++) {
+	    			for(int j = 0; j < matrix[i].length; j++) {
+	    				if(matrix[i][j] == 1.) {
+	    					result[j] = answers[i];
+	    				}
+	    			}
+	    		}
+	    		return result;
+	    	}
+	    	
+	    	private boolean isEnd(boolean[] lines) {
+	    		for(boolean index : lines) {
+	    			if(!index)
+	    			return false;
+	    		}
+	    		return true;
+	    	}
+	    	
+	    	private void toNullifyElements(double[][] matrix, double[] answers,
+	    	int exceptLine, int row) {
+	    		for(int i = 0; i < matrix.length; i++) {
+	    			if(i == exceptLine)
+	    			continue;
+	    			double first = matrix[i][row];
+	    			for(int j = 0; j < matrix[i].length; j++) {
+	    				if(matrix[i][j] != 0.)
+	    				matrix[i][j] -= first * matrix[exceptLine][j];
+	    			}
+	    			if(answers[i] != 0.)
+	    			answers[i] -= first * answers[exceptLine];
+	    		}
+	    	}
+	    	
+	    	private void divToElement(double[] line, double div) {
+	    		for(int index = 0; index < line.length; index++) {
+	    			if(line[index] != 0.)
+	    			line[index] /= div;
+	    		}
+	    	}
+	    	
+	    	private void printSLAU(double[][] matrix, double[] answers) {
+	    		StringBuilder sb = new StringBuilder();
+	    		for(int i = 0; i < answers.length; i++) {
+	    			sb.append("|");
+	    			for(int j = 0; j < matrix[i].length; j++)
+	    			sb.append(" ").append(String.format(FORMAT, matrix[i][j]));
+	    			sb.append(" | ").append(String.format(FORMAT, answers[i])).append(" |\n");
+	    		}
+	    		System.out.println(sb);
+	    	}
+	    	
+	    	private int getIndexMin(double[][] matrix, boolean[] lines, int index) {
+	    		int res = -1;
+	    		double min = Integer.MAX_VALUE;
+	    		for(int i = 0; i < matrix.length; i++) {
+	    			if(!lines[i] && Math.abs(matrix[i][index]) < Math.abs(min) &&
+	    			matrix[i][index] != 0) {
+	    				res = i;
+	    				min = matrix[i][index];
+	    			}
+	    		}
+	    		return res;
+	    	}
+	    }
+	    
+	\end{verbatim}
+	
+	\subsection{Пример формулы}
+	\label{sec:mathexample}
+	
+	Решение квадратных систем линейного алгебраического уравнения:
+	\begin{equation}\label{eq:solv}
+		A=\begin{pmatrix}
+			a11 & a12 & \cdots  & a1n \\
+			a21 & a22 & \cdots  & a2n \\
+			\vdots  & \cdots  & \ddots  & \vdots  \\
+			an1 & an2 & \cdots & ann 
+		\end{pmatrix}
+	    \hspace{0.5cm}
+	    aii\neq 0
+	    \hspace{0.5cm}
+	    I=\begin{pmatrix}
+	    	1 & 0 & \cdots & 0 \\
+	    	0 & 1 & \cdots & 0 \\
+	    	\vdots & \vdots & \ddots & \vdots \\
+	    	0 & 0 & \cdots & 1
+	    \end{pmatrix}
+	\end{equation}
+	
+	Можно сослаться на уравнение~\eqref{eq:solv}.
+	
+\section{Пример вставки изображения}
+\label{sec:picexample}
+\begin{figure}[h]
+	\centering
+	\includegraphics[width=0.4\textwidth]{collage.png}
+	\caption{Работа программы}\label{fig:par}
+\end{figure}
+	
+	\section{Пример библиографических ссылок}
+    http://geo.phys.spbu.ru/LDUS/files/books/LaTeX/LaTeX-Lvovsky.pdf
+	
+	\begin{thebibliography}{9}
+		\bibitem{Knuth-2003}Кнут Д.Э. Всё про \TeX. \newblock --- Москва: Изд. Вильямс, 2003 г. 550~с.
+		\bibitem{Lvovsky-2003}Львовский С.М. Набор и верстка в системе \LaTeX{}. \newblock --- 3-е издание, исправленное и дополненное, 2003 г.
+		\bibitem{Voroncov-2005}Воронцов К.В. \LaTeX{} в примерах. 2005 г.
+	\end{thebibliography}
+\end{document}
